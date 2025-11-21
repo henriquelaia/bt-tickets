@@ -1,0 +1,201 @@
+import { useState, useEffect } from 'react';
+import { useParams, useNavigate } from 'react-router-dom';
+import { useAuth } from '../context/AuthContext';
+import { useApp } from '../context/AppContext';
+import { ArrowLeft, Calendar, User, MapPin, Phone, Wrench, Send, Paperclip } from 'lucide-react';
+import { getStatusName, getPriorityName, getCategoryById, getEquipmentTypeById, getUserById, formatDateTime, getInitials } from '../utils/demoData';
+
+export default function TicketDetail() {
+}
+    }, [id]);
+
+useEffect(() => {
+    // Refresh ticket when it changes
+    const foundTicket = getTicketById(id);
+    if (foundTicket) {
+        setTicket(foundTicket);
+    }
+}, [getTicketById, id]);
+
+if (!ticket) {
+    return (
+        <div className="flex items-center justify-center" style={{ height: '100vh' }}>
+            <div>
+                <h2>Serviço não encontrado</h2>
+                <button onClick={() => navigate('/')} className="btn btn-primary" style={{ marginTop: 'var(--space-lg)' }}>
+                    Voltar ao Dashboard
+                </button>
+            </div>
+        </div>
+    );
+}
+
+const category = getCategoryById(ticket.category);
+const equipment = getEquipmentTypeById(ticket.equipmentType);
+const creator = getUserById(ticket.createdBy);
+const assignee = getUserById(ticket.assignedTo);
+
+background: 'var(--clr-bg-secondary)',
+    borderBottom: '1px solid var(--clr-border)',
+        padding: 'var(--space-lg)',
+            position: 'sticky',
+                top: 0,
+                    zIndex: 'var(--z-sticky)'
+        }}>
+    <div className="container flex items-center gap-md">
+        <button onClick={() => navigate('/')} className="btn btn-secondary btn-icon">
+            <ArrowLeft size={20} />
+        </button>
+        <div className="flex-1">
+            <div className="flex items-center gap-md" style={{ marginBottom: 'var(--space-xs)' }}>
+                <span className={`badge badge-${ticket.status}`}>
+                    {getStatusName(ticket.status)}
+                </span>
+                {ticket.priority === 'urgente' && (
+                    <span className="text-xs font-semibold priority-urgente">⚠ URGENTE</span>
+                )}
+            </div>
+            <h1 style={{ fontSize: 'var(--font-size-xl)', marginBottom: 0 }}>
+                {ticket.title}
+            </h1>
+        </div>
+    </div>
+        </header >
+
+    <div className="container" style={{ padding: 'var(--space-xl) var(--space-lg)' }}>
+        <div className="grid grid-cols-1 grid-cols-lg-3 gap-xl">
+            {/* Main Content */}
+            <div style={{ gridColumn: 'span 2' }}>
+                {/* Client Info */}
+                <div className="card" style={{ marginBottom: 'var(--space-xl)' }}>
+                    <h2 style={{ marginBottom: 'var(--space-lg)' }}>Informação do Cliente</h2>
+
+                    <div className="grid grid-cols-1 grid-cols-md-2 gap-lg">
+                        <div>
+                            <div className="flex items-center gap-sm" style={{ marginBottom: 'var(--space-sm)' }}>
+                                <User size={18} className="text-muted" />
+                                <div className="flex items-center gap-sm" style={{ marginBottom: 'var(--space-sm)' }}>
+                                    <MapPin size={18} className="text-muted" />
+                                    <span className="text-sm text-muted">Morada</span>
+                                </div>
+                                <p className="font-medium">{ticket.clientAddress}</p>
+                            </div>
+                        </div>
+                    </div>
+
+                    {/* Equipment Info */}
+                    <div className="card" style={{ marginBottom: 'var(--space-xl)' }}>
+                        <h2 style={{ marginBottom: 'var(--space-lg)' }}>Equipamento</h2>
+
+                        <div className="grid grid-cols-1 grid-cols-md-3 gap-lg">
+                            <div>
+                                <div className="flex items-center gap-sm" style={{ marginBottom: 'var(--space-sm)' }}>
+                                    <Wrench size={18} className="text-muted" />
+                                    <span className="text-sm text-muted">Tipo</span>
+                                </div>
+                                <p className="font-medium">{equipment?.icon} {equipment?.name}</p>
+                            </div>
+
+                            <div>
+                                <span className="text-sm text-muted" style={{ display: 'block', marginBottom: 'var(--space-sm)' }}>Marca</span>
+                                <p className="font-medium">{ticket.equipmentBrand}</p>
+                            </div>
+
+                            <div>
+                                <span className="text-sm text-muted" style={{ display: 'block', marginBottom: 'var(--space-sm)' }}>Modelo</span>
+                                <p className="font-medium">{ticket.equipmentModel || '-'}</p>
+                            </div>
+                        </div>
+
+                        {ticket.description && (
+                            < div className="card" style={{ marginBottom: 'var(--space-lg)' }}>
+                                <h3 style={{ marginBottom: 'var(--space-md)' }}>Alterar Status</h3>
+                                <select
+                                    className="select w-full"
+                                    value={ticket.status}
+                                    onChange={(e) => handleStatusChange(e.target.value)}
+                                >
+                                    {statusOptions.map(status => (
+                                        <option key={status.id} value={status.id}>
+                                            {status.name}
+                                        </option>
+                                    ))}
+                                </select>
+                            </div >
+
+    {/* Details Card */}
+                        < div className="card" style={{ marginBottom: 'var(--space-lg)' }}>
+                            <h3 style={{ marginBottom: 'var(--space-lg)' }}>Detalhes</h3>
+
+                            <div style={{ marginBottom: 'var(--space-md)' }}>
+                                <span className="text-sm text-muted" style={{ display: 'block', marginBottom: 'var(--space-xs)' }}>Categoria</span>
+                                <span className="badge" style={{ background: category?.color }}>{category?.name}</span>
+                            </div>
+
+                            <div style={{ marginBottom: 'var(--space-md)' }}>
+                                <span className="text-sm text-muted" style={{ display: 'block', marginBottom: 'var(--space-xs)' }}>Prioridade</span>
+                                <span className={`font-semibold priority-${ticket.priority}`}>
+                                    {getPriorityName(ticket.priority)}
+                                </span>
+                            </div>
+
+                            {
+                                ticket.scheduledDate && (
+                                    <div style={{ marginBottom: 'var(--space-md)' }}>
+                                        <span className="text-sm text-muted" style={{ display: 'block', marginBottom: 'var(--space-xs)' }}>Data Agendada</span>
+                                        <div className="flex items-center gap-xs">
+                                            <Calendar size={16} />
+                                            <span className="text-sm">{formatDateTime(ticket.scheduledDate)}</span>
+                                        </div>
+                                    </div>
+                                )
+                            }
+
+                            <div style={{ marginBottom: 'var(--space-md)' }}>
+                                <span className="text-sm text-muted" style={{ display: 'block', marginBottom: 'var(--space-xs)' }}>Criado por</span>
+                                <div className="flex items-center gap-sm">
+                                    <div className="avatar avatar-sm">{getInitials(creator?.name || 'U')}</div>
+                                    <span className="text-sm">{creator?.name}</span>
+                                </div>
+                            </div>
+
+                            {
+                                assignee && (
+                                    <div>
+                                        <span className="text-sm text-muted" style={{ display: 'block', marginBottom: 'var(--space-xs)' }}>Atribuído a</span>
+                                        <div className="flex items-center gap-sm">
+                                            <div className="avatar avatar-sm">{getInitials(assignee.name)}</div>
+                                            <span className="text-sm">{assignee.name}</span>
+                                        </div>
+                                    </div>
+                                )
+                            }
+                        </div >
+
+                        {/* Actions */}
+                        {
+                            ticket.status === 'concluido' && currentUser.id === ticket.createdBy && (
+                                <div className="card">
+                                    <h3 style={{ marginBottom: 'var(--space-md)' }}>Ações</h3>
+                                    <button
+                                        onClick={() => handleStatusChange('aprovado_cliente')}
+                                        className="btn btn-success w-full"
+                                        style={{ marginBottom: 'var(--space-sm)' }}
+                                    >
+                                        Aprovar Serviço
+                                    </button>
+                                    <button
+                                        onClick={() => handleStatusChange('revisao_necessaria')}
+                                        className="btn btn-danger w-full"
+                                    >
+                                        Solicitar Revisão
+                                    </button>
+                                </div>
+                            )
+                        }
+                    </div >
+                </div >
+            </div >
+        </div >
+        );
+}
