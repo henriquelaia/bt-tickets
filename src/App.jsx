@@ -56,8 +56,8 @@ const CalendarPage = () => {
 
 function App() {
     return (
-        <AuthProvider>
-            <ToastProvider>
+        <ToastProvider>
+            <AuthProvider>
                 <AppProvider>
                     <BrowserRouter>
                         <Routes>
@@ -80,8 +80,8 @@ function App() {
                         </Routes>
                     </BrowserRouter>
                 </AppProvider>
-            </ToastProvider>
-        </AuthProvider>
+            </AuthProvider>
+        </ToastProvider>
     );
 }
 

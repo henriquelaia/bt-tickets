@@ -1,26 +1,26 @@
 :root {
   /* Colors - Premium HVAC Theme */
-  --clr-primary: #0ea5e9;
-  --clr-primary-dark: #0284c7;
-  --clr-primary-light: #38bdf8;
+  --clr-primary: #1e40af;
+  --clr-primary-dark: #1e3a8a;
+  --clr-primary-light: #3b82f6;
 
   --clr-secondary: #8b5cf6;
   --clr-secondary-dark: #7c3aed;
   --clr-secondary-light: #a78bfa;
 
-  --clr-accent: #10b981;
-  --clr-accent-dark: #059669;
-  --clr-accent-light: #34d399;
+  --clr-accent: #f97316;
+  --clr-accent-dark: #ea580c;
+  --clr-accent-light: #fb923c;
 
-  --clr-warning: #f59e0b;
+  --clr-warning: #fbbf24;
   --clr-error: #ef4444;
   --clr-info: #3b82f6;
 
   /* Status Colors */
-  --clr-pendente: #6b7280;
+  --clr-pendente: #fbbf24;
   --clr-agendado: #3b82f6;
-  --clr-em-andamento: #f59e0b;
-  --clr-concluido: #8b5cf6;
+  --clr-em-andamento: #8b5cf6;
+  --clr-concluido: #10b981;
   --clr-aprovado: #10b981;
   --clr-revisao: #ef4444;
   --clr-arquivado: #4b5563;
@@ -45,7 +45,7 @@
   --clr-border-light: #475569;
 
   /* Gradients */
-  --gradient-primary: linear-gradient(135deg, #0ea5e9 0%, #8b5cf6 100%);
+  --gradient-primary: linear-gradient(135deg, #1e40af 0%, #3b82f6 100%);
   --gradient-secondary: linear-gradient(135deg, #8b5cf6 0%, #ec4899 100%);
   --gradient-success: linear-gradient(135deg, #10b981 0%, #0ea5e9 100%);
   --gradient-warning: linear-gradient(135deg, #f59e0b 0%, #ef4444 100%);
@@ -1108,8 +1108,8 @@ a:hover {
 
   .sidebar {
     width: 260px;
-    background-color: var(--clr-bg-secondary);
-    border-right: 1px solid var(--clr-border);
+    background: linear-gradient(180deg, #1e3a8a 0%, #0f172a 100%);
+    border-right: 1px solid rgba(59, 130, 246, 0.1);
     display: flex;
     flex-direction: column;
     position: fixed;
@@ -1117,7 +1117,8 @@ a:hover {
     bottom: 0;
     left: 0;
     z-index: var(--z-fixed);
-    transition: transform var(--transition-normal);
+    transition: transform var(--transition-base);
+    box-shadow: var(--shadow-xl);
   }
 
   .main-content {
@@ -1155,15 +1156,17 @@ a:hover {
   }
 
   .brand-icon {
-    width: 32px;
-    height: 32px;
-    background: linear-gradient(135deg, var(--clr-primary), var(--clr-accent));
-    border-radius: var(--radius-md);
+    width: 36px;
+    height: 36px;
+    background: linear-gradient(135deg, var(--clr-accent), var(--clr-accent-dark));
+    border-radius: var(--radius-lg);
     display: flex;
     align-items: center;
     justify-content: center;
     color: white;
-    font-size: 14px;
+    font-size: 16px;
+    font-weight: 700;
+    box-shadow: 0 4px 8px rgba(249, 115, 22, 0.3);
   }
 
   .user-profile-summary {
@@ -1171,7 +1174,8 @@ a:hover {
     display: flex;
     align-items: center;
     gap: var(--space-md);
-    border-bottom: 1px solid var(--clr-border);
+    border-bottom: 1px solid rgba(59, 130, 246, 0.1);
+    background: rgba(30, 58, 138, 0.3);
   }
 
   .user-info {
@@ -1210,18 +1214,23 @@ a:hover {
     color: var(--clr-text-secondary);
     text-decoration: none;
     border-radius: var(--radius-md);
-    transition: all var(--transition-fast);
+    transition: all var(--transition-base);
     font-weight: 500;
+    border-left: 3px solid transparent;
+    margin-left: -3px;
   }
 
   .nav-item:hover {
-    background-color: var(--clr-bg-tertiary);
-    color: var(--clr-text-primary);
+    background-color: rgba(59, 130, 246, 0.08);
+    color: var(--clr-primary-light);
+    transform: translateX(2px);
   }
 
   .nav-item.active {
-    background-color: rgba(59, 130, 246, 0.1);
-    color: var(--clr-primary);
+    background-color: rgba(59, 130, 246, 0.12);
+    color: var(--clr-primary-light);
+    border-left-color: var(--clr-accent);
+    font-weight: 600;
   }
 
   .sidebar-footer {
