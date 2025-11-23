@@ -1,11 +1,13 @@
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { DndProvider } from 'react-dnd';
 import { HTML5Backend } from 'react-dnd-html5-backend';
 import { ChevronLeft, ChevronRight } from 'lucide-react';
 import CalendarDay from './CalendarDay';
+import LoadingSpinner from '../LoadingSpinner';
 
 export default function ServiceCalendar({ tickets, onTicketMove }) {
     const [currentDate, setCurrentDate] = useState(new Date());
+    const [isLoading, setIsLoading] = useState(false);
 
     const getDaysInMonth = (year, month) => {
         return new Date(year, month + 1, 0).getDate();
@@ -27,13 +29,17 @@ export default function ServiceCalendar({ tickets, onTicketMove }) {
 
     const weekdayNames = ['Dom', 'Seg', 'Ter', 'Qua', 'Qui', 'Sex', 'Sáb'];
 
-    const handlePrevMonth = () => {
-        setCurrentDate(new Date(year, month - 1, 1));
+    const changeMonth = (offset) => {
+        setIsLoading(true);
+        // Simulate loading delay for better UX
+        setTimeout(() => {
+            setCurrentDate(new Date(year, month + offset, 1));
+            setIsLoading(false);
+        }, 400);
     };
 
-    const handleNextMonth = () => {
-        setCurrentDate(new Date(year, month + 1, 1));
-    };
+    const handlePrevMonth = () => changeMonth(-1);
+    const handleNextMonth = () => changeMonth(1);
 
     const handleTicketDrop = (ticketId, targetDate) => {
         const newDate = new Date(targetDate);
@@ -85,7 +91,7 @@ export default function ServiceCalendar({ tickets, onTicketMove }) {
 
     return (
         <DndProvider backend={HTML5Backend}>
-            <div className="calendar-container">
+            <div className="calendar-container" style={{ position: 'relative', minHeight: '600px' }}>
                 {/* Calendar Header with Gradient */}
                 <div className="calendar-header">
                     <h2>{monthNames[month]} {year}</h2>
@@ -94,6 +100,7 @@ export default function ServiceCalendar({ tickets, onTicketMove }) {
                             onClick={handlePrevMonth}
                             className="btn btn-secondary"
                             style={{ minWidth: '40px' }}
+                            disabled={isLoading}
                         >
                             <ChevronLeft size={20} />
                         </button>
@@ -101,6 +108,7 @@ export default function ServiceCalendar({ tickets, onTicketMove }) {
                             onClick={handleNextMonth}
                             className="btn btn-secondary"
                             style={{ minWidth: '40px' }}
+                            disabled={isLoading}
                         >
                             <ChevronRight size={20} />
                         </button>
@@ -116,8 +124,28 @@ export default function ServiceCalendar({ tickets, onTicketMove }) {
                     ))}
                 </div>
 
+                {/* Loading Overlay */}
+                {isLoading && (
+                    <div style={{
+                        position: 'absolute',
+                        top: '80px', // Below header
+                        left: 0,
+                        right: 0,
+                        bottom: 0,
+                        background: 'rgba(255, 255, 255, 0.7)',
+                        backdropFilter: 'blur(2px)',
+                        display: 'flex',
+                        justifyContent: 'center',
+                        alignItems: 'center',
+                        zIndex: 10,
+                        borderRadius: '0 0 var(--radius-lg) var(--radius-lg)'
+                    }}>
+                        <LoadingSpinner size="large" />
+                    </div>
+                )}
+
                 {/* Days Grid */}
-                <div className="calendar-grid">
+                <div className="calendar-grid" style={{ opacity: isLoading ? 0.5 : 1, transition: 'opacity 0.2s' }}>
                     {days}
                 </div>
             </div>

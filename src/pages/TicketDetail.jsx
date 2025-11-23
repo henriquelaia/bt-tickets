@@ -6,6 +6,7 @@ import { ArrowLeft, Calendar, User, MapPin, Phone, Wrench, Send, PenTool, CheckC
 import { getStatusName, getPriorityName, getUserById, formatDateTime, getInitials, getCategoryById, getEquipmentTypeById } from '../utils/demoData';
 import PhotoUpload from '../pages/components/PhotoUpload';
 import SignaturePad from '../components/SignaturePad';
+import LoadingSpinner from '../components/LoadingSpinner';
 
 const statusOptions = [
     { id: 'pendente', name: 'Pendente' },
@@ -24,17 +25,25 @@ export default function TicketDetail() {
     const { getTicketById, updateTicket, addNote, requestRevision, approveTicket, archiveTicket } = useApp();
 
     const [ticket, setTicket] = useState(null);
+    const [isLoading, setIsLoading] = useState(true);
     const [newNote, setNewNote] = useState('');
     const [noteVisibleToClient, setNoteVisibleToClient] = useState(false);
     const [photos, setPhotos] = useState([]);
     const [showSignaturePad, setShowSignaturePad] = useState(false);
 
     useEffect(() => {
-        const foundTicket = getTicketById(id);
-        if (foundTicket) {
-            setTicket(foundTicket);
-            setPhotos(foundTicket.photos || []);
-        }
+        setIsLoading(true);
+        // Simulate network request
+        const timer = setTimeout(() => {
+            const foundTicket = getTicketById(id);
+            if (foundTicket) {
+                setTicket(foundTicket);
+                setPhotos(foundTicket.photos || []);
+            }
+            setIsLoading(false);
+        }, 600);
+
+        return () => clearTimeout(timer);
     }, [id, getTicketById]);
 
     const handleStatusChange = (newStatus) => {
@@ -98,6 +107,14 @@ export default function TicketDetail() {
         setNewNote('');
         setNoteVisibleToClient(false);
     };
+
+    if (isLoading) {
+        return (
+            <div className="flex items-center justify-center" style={{ height: '100vh' }}>
+                <LoadingSpinner size="large" />
+            </div>
+        );
+    }
 
     if (!ticket) {
         return (
