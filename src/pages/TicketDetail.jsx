@@ -2,34 +2,30 @@ import { useState, useEffect } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
 import { useAuth } from '../context/AuthContext';
 import { useApp } from '../context/AppContext';
-import { ArrowLeft, Calendar, User, MapPin, Phone, Wrench, Send, PenTool, CheckCircle, AlertTriangle, XCircle } from 'lucide-react';
-import { getStatusName, getPriorityName, getUserById, formatDateTime, getInitials, getCategoryById, getEquipmentTypeById } from '../utils/demoData';
+import { ArrowLeft, Calendar, User, Send, CheckCircle, AlertTriangle, XCircle, CheckCircle2, RotateCcw, FileText } from 'lucide-react';
+import { getStatusName, getPriorityName, getUserById, formatDateTime, getInitials, getCategoryById } from '../utils/demoData';
 import PhotoUpload from '../pages/components/PhotoUpload';
-import SignaturePad from '../components/SignaturePad';
 import LoadingSpinner from '../components/LoadingSpinner';
+import ResolutionModal from '../components/ResolutionModal';
 
 const statusOptions = [
-    { id: 'pendente', name: 'Pendente' },
-    { id: 'agendado', name: 'Agendado' },
+    { id: 'aberto', name: 'Aberto' },
     { id: 'em_andamento', name: 'Em Andamento' },
-    { id: 'concluido', name: 'Concluído' },
-    { id: 'aprovado_cliente', name: 'Aprovado pelo Cliente' },
-    { id: 'revisao_necessaria', name: 'Revisão Necessária' },
-    { id: 'arquivado', name: 'Arquivado' }
+    { id: 'resolvido', name: 'Resolvido' },
+    { id: 'fechado', name: 'Fechado' }
 ];
 
 export default function TicketDetail() {
     const { id } = useParams();
     const navigate = useNavigate();
     const { currentUser } = useAuth();
-    const { getTicketById, updateTicket, addNote, requestRevision, approveTicket, archiveTicket } = useApp();
+    const { getTicketById, updateTicket, addNote } = useApp();
 
     const [ticket, setTicket] = useState(null);
     const [isLoading, setIsLoading] = useState(true);
     const [newNote, setNewNote] = useState('');
-    const [noteVisibleToClient, setNoteVisibleToClient] = useState(false);
     const [photos, setPhotos] = useState([]);
-    const [showSignaturePad, setShowSignaturePad] = useState(false);
+    const [isResolutionModalOpen, setIsResolutionModalOpen] = useState(false);
 
     useEffect(() => {
         setIsLoading(true);
@@ -62,28 +58,6 @@ export default function TicketDetail() {
         }
     };
 
-    const handleSignatureSave = (signatureDataUrl) => {
-        // Create a new photo object for the signature
-        const signaturePhoto = {
-            id: `sig-${Date.now()}`,
-            url: signatureDataUrl,
-            name: 'Assinatura do Cliente',
-            type: 'image/png',
-            size: 0,
-            createdAt: new Date().toISOString()
-        };
-
-        // Update ticket with new photo
-        const updatedTicket = {
-            ...ticket,
-            photos: [...(ticket.photos || []), signaturePhoto]
-        };
-
-        updateTicket(updatedTicket);
-        setPhotos(updatedTicket.photos);
-        setShowSignaturePad(false);
-    };
-
     const handleAddNote = () => {
         if (!newNote.trim()) return;
 
@@ -92,7 +66,7 @@ export default function TicketDetail() {
             author: currentUser.id,
             content: newNote,
             timestamp: new Date().toISOString(),
-            visibleToClient: noteVisibleToClient
+            isResolution: false
         };
 
         addNote(ticket.id, note);
@@ -103,9 +77,65 @@ export default function TicketDetail() {
             notes: [...(ticket.notes || []), note]
         };
         setTicket(updatedTicket);
-
         setNewNote('');
-        setNoteVisibleToClient(false);
+    };
+
+    const handleResolve = (resolutionNote) => {
+        const note = {
+            id: Date.now(),
+            author: currentUser.id,
+            content: resolutionNote,
+            timestamp: new Date().toISOString(),
+            isResolution: true
+        };
+
+        addNote(ticket.id, note);
+
+        const updatedTicket = {
+            ...ticket,
+            status: 'resolvido',
+            notes: [...(ticket.notes || []), note],
+            resolvedAt: new Date().toISOString(),
+            resolvedBy: currentUser.id
+        };
+
+        updateTicket(updatedTicket);
+        setTicket(updatedTicket);
+    };
+
+    const handleClose = () => {
+        const updatedTicket = {
+            ...ticket,
+            status: 'fechado',
+            closedAt: new Date().toISOString(),
+            closedBy: currentUser.id
+        };
+        updateTicket(updatedTicket);
+        setTicket(updatedTicket);
+    };
+
+    const handleReopen = () => {
+        const reason = prompt('Motivo da reabertura:');
+        if (!reason) return;
+
+        const note = {
+            id: Date.now(),
+            author: currentUser.id,
+            content: `Ticket reaberto. Motivo: ${reason}`,
+            timestamp: new Date().toISOString(),
+            isSystem: true
+        };
+
+        addNote(ticket.id, note);
+
+        const updatedTicket = {
+            ...ticket,
+            status: 'em_andamento',
+            notes: [...(ticket.notes || []), note]
+        };
+
+        updateTicket(updatedTicket);
+        setTicket(updatedTicket);
     };
 
     if (isLoading) {
@@ -120,7 +150,7 @@ export default function TicketDetail() {
         return (
             <div className="flex items-center justify-center" style={{ height: '100vh' }}>
                 <div style={{ textAlign: 'center' }}>
-                    <h2>Serviço não encontrado</h2>
+                    <h2>Ticket não encontrado</h2>
                     <button onClick={() => navigate('/')} className="btn btn-primary" style={{ marginTop: 'var(--space-lg)' }}>
                         Voltar ao Dashboard
                     </button>
@@ -130,9 +160,15 @@ export default function TicketDetail() {
     }
 
     const category = getCategoryById(ticket.category);
-    const equipment = getEquipmentTypeById(ticket.equipmentType);
     const creator = getUserById(ticket.createdBy);
     const assignee = getUserById(ticket.assignedTo);
+    const resolutionNote = ticket.notes?.find(n => n.isResolution);
+
+    // Permission checks
+    const isCreator = currentUser.id === ticket.createdBy;
+    const isAssignee = currentUser.id === ticket.assignedTo;
+    const canResolve = (isAssignee || isCreator) && (ticket.status === 'aberto' || ticket.status === 'em_andamento');
+    const canVerify = isCreator && ticket.status === 'resolvido';
 
     return (
         <div>
@@ -151,7 +187,7 @@ export default function TicketDetail() {
                     </button>
                     <div className="flex-1">
                         <div className="flex items-center gap-md" style={{ marginBottom: 'var(--space-xs)' }}>
-                            <span className={`badge badge-${ticket.status}`}>
+                            <span className={`badge badge-${ticket.status === 'aberto' ? 'pendente' : ticket.status === 'resolvido' ? 'concluido' : ticket.status === 'fechado' ? 'aprovado' : 'em-andamento'}`}>
                                 {getStatusName(ticket.status)}
                             </span>
                             {ticket.priority === 'urgente' && (
@@ -169,67 +205,29 @@ export default function TicketDetail() {
                 <div className="grid grid-cols-1 grid-cols-lg-3 gap-xl">
                     {/* Main Content */}
                     <div style={{ gridColumn: 'span 2' }}>
-                        {/* Client Info */}
-                        <div className="card" style={{ marginBottom: 'var(--space-xl)' }}>
-                            <h2 style={{ marginBottom: 'var(--space-lg)' }}>Informação do Cliente</h2>
 
-                            <div className="grid grid-cols-1 grid-cols-md-2 gap-lg">
-                                <div>
-                                    <div className="flex items-center gap-sm" style={{ marginBottom: 'var(--space-sm)' }}>
-                                        <User size={18} className="text-muted" />
-                                        <span className="text-sm text-muted">Nome</span>
-                                    </div>
-                                    <p className="font-medium">{ticket.clientName}</p>
+                        {/* Resolution Note (if resolved) */}
+                        {resolutionNote && (
+                            <div className="card mb-xl border-success bg-success-alpha">
+                                <div className="flex items-center gap-sm mb-md text-success">
+                                    <CheckCircle2 size={24} />
+                                    <h2 className="text-lg font-bold m-0">Resolução</h2>
                                 </div>
-
-                                <div>
-                                    <div className="flex items-center gap-sm" style={{ marginBottom: 'var(--space-sm)' }}>
-                                        <Phone size={18} className="text-muted" />
-                                        <span className="text-sm text-muted">Telefone</span>
-                                    </div>
-                                    <p className="font-medium">{ticket.clientPhone}</p>
-                                </div>
-
-                                <div style={{ gridColumn: 'span 2' }}>
-                                    <div className="flex items-center gap-sm" style={{ marginBottom: 'var(--space-sm)' }}>
-                                        <MapPin size={18} className="text-muted" />
-                                        <span className="text-sm text-muted">Morada</span>
-                                    </div>
-                                    <p className="font-medium">{ticket.clientAddress}</p>
+                                <p className="text-lg">{resolutionNote.content}</p>
+                                <div className="flex items-center gap-sm mt-md text-sm text-secondary">
+                                    <User size={14} />
+                                    <span>Resolvido por {getUserById(resolutionNote.author)?.name}</span>
+                                    <span>•</span>
+                                    <Calendar size={14} />
+                                    <span>{formatDateTime(resolutionNote.timestamp)}</span>
                                 </div>
                             </div>
-                        </div>
+                        )}
 
-                        {/* Equipment Info */}
+                        {/* Description */}
                         <div className="card" style={{ marginBottom: 'var(--space-xl)' }}>
-                            <h2 style={{ marginBottom: 'var(--space-lg)' }}>Equipamento</h2>
-
-                            <div className="grid grid-cols-1 grid-cols-md-3 gap-lg">
-                                <div>
-                                    <div className="flex items-center gap-sm" style={{ marginBottom: 'var(--space-sm)' }}>
-                                        <Wrench size={18} className="text-muted" />
-                                        <span className="text-sm text-muted">Tipo</span>
-                                    </div>
-                                    <p className="font-medium">{equipment?.icon} {equipment?.name}</p>
-                                </div>
-
-                                <div>
-                                    <span className="text-sm text-muted" style={{ display: 'block', marginBottom: 'var(--space-sm)' }}>Marca</span>
-                                    <p className="font-medium">{ticket.equipmentBrand}</p>
-                                </div>
-
-                                <div>
-                                    <span className="text-sm text-muted" style={{ display: 'block', marginBottom: 'var(--space-sm)' }}>Modelo</span>
-                                    <p className="font-medium">{ticket.equipmentModel || '-'}</p>
-                                </div>
-                            </div>
-
-                            {ticket.description && (
-                                <div style={{ marginTop: 'var(--space-lg)' }}>
-                                    <span className="text-sm text-muted" style={{ display: 'block', marginBottom: 'var(--space-sm)' }}>Descrição</span>
-                                    <p>{ticket.description}</p>
-                                </div>
-                            )}
+                            <h2 style={{ marginBottom: 'var(--space-lg)' }}>Descrição</h2>
+                            <p style={{ whiteSpace: 'pre-wrap' }}>{ticket.description}</p>
                         </div>
 
                         {/* Photo Upload */}
@@ -237,49 +235,43 @@ export default function TicketDetail() {
                             <PhotoUpload photos={photos} onPhotosChange={handlePhotosChange} />
                         </div>
 
-                        {/* Technical Notes */}
+                        {/* Activity / Notes */}
                         <div className="card">
-                            <h2 style={{ marginBottom: 'var(--space-lg)' }}>Notas Técnicas</h2>
+                            <h2 style={{ marginBottom: 'var(--space-lg)' }}>Atividade e Notas</h2>
 
-                            {/* Notes Thread */}
                             <div className="notes-thread" style={{ marginBottom: 'var(--space-lg)' }}>
                                 {ticket.notes && ticket.notes.length > 0 ? (
-                                    ticket.notes.map(note => {
+                                    ticket.notes.filter(n => !n.isResolution).map(note => {
                                         const author = getUserById(note.author);
                                         return (
                                             <div
                                                 key={note.id}
                                                 className="note-item"
                                                 style={{
-                                                    background: note.visibleToClient ? 'var(--clr-success-alpha)' : 'var(--clr-bg-tertiary)',
+                                                    background: note.isSystem ? 'var(--clr-bg-secondary)' : 'var(--clr-bg-tertiary)',
                                                     padding: 'var(--space-md)',
                                                     borderRadius: 'var(--radius-md)',
                                                     marginBottom: 'var(--space-md)',
-                                                    border: note.visibleToClient ? '1px solid var(--clr-success)' : '1px solid var(--clr-border)'
+                                                    border: note.isSystem ? '1px dashed var(--clr-border)' : '1px solid var(--clr-border)'
                                                 }}
                                             >
                                                 <div className="flex items-start gap-md">
                                                     <div className="avatar avatar-sm">
-                                                        {getInitials(author?.name || 'U')}
+                                                        {getInitials(author?.name || 'S')}
                                                     </div>
                                                     <div className="flex-1">
                                                         <div className="flex items-center justify-between" style={{ marginBottom: 'var(--space-xs)' }}>
-                                                            <span className="font-medium text-sm">{author?.name}</span>
+                                                            <span className="font-medium text-sm">{author?.name || 'Sistema'}</span>
                                                             <span className="text-xs text-muted">{formatDateTime(note.timestamp)}</span>
                                                         </div>
                                                         <p style={{ margin: 0 }}>{note.content}</p>
-                                                        {note.visibleToClient && (
-                                                            <span className="text-xs" style={{ color: 'var(--clr-success)', marginTop: 'var(--space-xs)', display: 'block' }}>
-                                                                ✓ Visível para o cliente
-                                                            </span>
-                                                        )}
                                                     </div>
                                                 </div>
                                             </div>
                                         );
                                     })
                                 ) : (
-                                    <p className="text-muted text-sm">Ainda não existem notas técnicas.</p>
+                                    <p className="text-muted text-sm">Nenhuma atividade recente.</p>
                                 )}
                             </div>
 
@@ -288,30 +280,19 @@ export default function TicketDetail() {
                                 <textarea
                                     value={newNote}
                                     onChange={(e) => setNewNote(e.target.value)}
-                                    placeholder="Adicionar nova nota..."
+                                    placeholder="Adicionar comentário ou atualização..."
                                     className="textarea w-full"
                                     rows={3}
                                     style={{ marginBottom: 'var(--space-sm)' }}
                                 />
-
-                                <div className="flex items-center justify-between">
-                                    <label className="flex items-center gap-sm cursor-pointer">
-                                        <input
-                                            type="checkbox"
-                                            checked={noteVisibleToClient}
-                                            onChange={(e) => setNoteVisibleToClient(e.target.checked)}
-                                            style={{ width: '18px', height: '18px', cursor: 'pointer' }}
-                                        />
-                                        <span className="text-sm">Visível para o cliente</span>
-                                    </label>
-
+                                <div className="flex justify-end">
                                     <button
                                         onClick={handleAddNote}
                                         className="btn btn-primary"
                                         disabled={!newNote.trim()}
                                     >
                                         <Send size={18} />
-                                        Adicionar Nota
+                                        Comentar
                                     </button>
                                 </div>
                             </div>
@@ -320,9 +301,51 @@ export default function TicketDetail() {
 
                     {/* Sidebar */}
                     <div>
-                        {/* Change Status */}
+                        {/* Actions Card */}
+                        <div className="card mb-lg animate-slideUp">
+                            <h3 className="font-bold mb-md">Ações</h3>
+
+                            <div className="flex flex-col gap-sm">
+                                {canResolve && (
+                                    <button
+                                        onClick={() => setIsResolutionModalOpen(true)}
+                                        className="btn btn-success w-full flex justify-center items-center gap-xs"
+                                    >
+                                        <CheckCircle2 size={18} />
+                                        Resolver Ticket
+                                    </button>
+                                )}
+
+                                {canVerify && (
+                                    <>
+                                        <button
+                                            onClick={handleClose}
+                                            className="btn btn-primary w-full flex justify-center items-center gap-xs"
+                                        >
+                                            <FileText size={18} />
+                                            Fechar Ticket
+                                        </button>
+                                        <button
+                                            onClick={handleReopen}
+                                            className="btn btn-warning w-full flex justify-center items-center gap-xs"
+                                        >
+                                            <RotateCcw size={18} />
+                                            Reabrir
+                                        </button>
+                                    </>
+                                )}
+
+                                {ticket.status === 'fechado' && (
+                                    <div className="p-sm bg-slate-800 rounded text-center text-sm text-muted">
+                                        Ticket fechado em {formatDateTime(ticket.closedAt)}
+                                    </div>
+                                )}
+                            </div>
+                        </div>
+
+                        {/* Status Select (Manual Override) */}
                         <div className="card" style={{ marginBottom: 'var(--space-lg)' }}>
-                            <h3 style={{ marginBottom: 'var(--space-md)' }}>Alterar Status</h3>
+                            <h3 style={{ marginBottom: 'var(--space-md)' }}>Status</h3>
                             <select
                                 className="select w-full"
                                 value={ticket.status}
@@ -352,16 +375,6 @@ export default function TicketDetail() {
                                 </span>
                             </div>
 
-                            {ticket.scheduledDate && (
-                                <div style={{ marginBottom: 'var(--space-md)' }}>
-                                    <span className="text-sm text-muted" style={{ display: 'block', marginBottom: 'var(--space-xs)' }}>Data Agendada</span>
-                                    <div className="flex items-center gap-xs">
-                                        <Calendar size={16} />
-                                        <span className="text-sm">{formatDateTime(ticket.scheduledDate)}</span>
-                                    </div>
-                                </div>
-                            )}
-
                             <div style={{ marginBottom: 'var(--space-md)' }}>
                                 <span className="text-sm text-muted" style={{ display: 'block', marginBottom: 'var(--space-xs)' }}>Criado por</span>
                                 <div className="flex items-center gap-sm">
@@ -380,79 +393,15 @@ export default function TicketDetail() {
                                 </div>
                             )}
                         </div>
-
-                        {/* Actions */}
-                        <div className="card p-md animate-slideUp" style={{ animationDelay: '0.3s' }}>
-                            <h3 className="font-bold mb-md">Ações</h3>
-
-                            <div className="flex flex-col gap-sm">
-                                {ticket.status === 'concluido' && (
-                                    <button
-                                        onClick={() => setShowSignaturePad(true)}
-                                        className="btn btn-outline w-full flex justify-center items-center gap-xs"
-                                    >
-                                        <PenTool size={18} />
-                                        Recolher Assinatura
-                                    </button>
-                                )}
-
-                                {ticket.status === 'concluido' && currentUser?.id === ticket.createdBy && (
-                                    <>
-                                        <button
-                                            onClick={() => approveTicket(ticket.id)}
-                                            className="btn btn-success w-full flex justify-center items-center gap-xs"
-                                        >
-                                            <CheckCircle size={18} />
-                                            Aprovar Serviço
-                                        </button>
-                                        <button
-                                            onClick={() => {
-                                                const reason = prompt('Motivo da revisão:');
-                                                if (reason) requestRevision(ticket.id, reason);
-                                            }}
-                                            className="btn btn-warning w-full flex justify-center items-center gap-xs"
-                                        >
-                                            <AlertTriangle size={18} />
-                                            Solicitar Revisão
-                                        </button>
-                                    </>
-                                )}
-
-                                {ticket.status === 'aprovado_cliente' && (
-                                    <button
-                                        onClick={() => archiveTicket(ticket.id)}
-                                        className="btn btn-secondary w-full flex justify-center items-center gap-xs"
-                                    >
-                                        <XCircle size={18} />
-                                        Arquivar
-                                    </button>
-                                )}
-                            </div>
-                        </div>
                     </div>
                 </div>
             </div>
 
-            {/* Signature Modal */}
-            {showSignaturePad && (
-                <div className="modal-overlay" style={{
-                    position: 'fixed',
-                    top: 0,
-                    left: 0,
-                    right: 0,
-                    bottom: 0,
-                    backgroundColor: 'rgba(0,0,0,0.5)',
-                    display: 'flex',
-                    alignItems: 'center',
-                    justifyContent: 'center',
-                    zIndex: 1000
-                }}>
-                    <SignaturePad
-                        onSave={handleSignatureSave}
-                        onCancel={() => setShowSignaturePad(false)}
-                    />
-                </div>
-            )}
+            <ResolutionModal
+                isOpen={isResolutionModalOpen}
+                onClose={() => setIsResolutionModalOpen(false)}
+                onConfirm={handleResolve}
+            />
         </div>
     );
 }

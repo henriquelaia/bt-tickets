@@ -1,7 +1,7 @@
 import { createContext, useContext, useState, useEffect } from 'react';
 import { useAuth } from './AuthContext';
 import { useToast } from './ToastContext';
-import { DEMO_TICKETS, CATEGORIES, EQUIPMENT_TYPES, STATUS_OPTIONS, PRIORITY_OPTIONS } from '../utils/demoData';
+import { DEMO_TICKETS, CATEGORIES, STATUS_OPTIONS, PRIORITY_OPTIONS } from '../utils/demoData';
 
 const AppContext = createContext(null);
 
@@ -18,7 +18,6 @@ export const AppProvider = ({ children }) => {
     const { showSuccess, showError, showInfo } = useToast();
     const [tickets, setTickets] = useState([]);
     const [categories] = useState(CATEGORIES);
-    const [equipmentTypes] = useState(EQUIPMENT_TYPES);
     const [statusOptions] = useState(STATUS_OPTIONS);
     const [priorityOptions] = useState(PRIORITY_OPTIONS);
 
@@ -61,27 +60,27 @@ export const AppProvider = ({ children }) => {
         };
 
         setTickets(prev => [newTicket, ...prev]);
-        showSuccess('Serviço criado com sucesso!');
+        showSuccess('Ticket criado com sucesso!');
         return { success: true, ticket: newTicket };
     };
 
     // Update ticket
-    const updateTicket = (ticketId, updates) => {
+    const updateTicket = (ticketData) => {
         setTickets(prev =>
             prev.map(ticket =>
-                ticket.id === ticketId
-                    ? { ...ticket, ...updates, updatedAt: new Date().toISOString() }
+                ticket.id === ticketData.id
+                    ? { ...ticket, ...ticketData, updatedAt: new Date().toISOString() }
                     : ticket
             )
         );
-        showSuccess('Serviço atualizado com sucesso!');
+        showSuccess('Ticket atualizado com sucesso!');
         return { success: true };
     };
 
     // Delete ticket
     const deleteTicket = (ticketId) => {
         setTickets(prev => prev.filter(ticket => ticket.id !== ticketId));
-        showSuccess('Serviço removido com sucesso!');
+        showSuccess('Ticket removido com sucesso!');
         return { success: true };
     };
 
@@ -108,11 +107,10 @@ export const AppProvider = ({ children }) => {
     };
 
     // Filter tickets
-    const filterTickets = ({ status, category, equipmentType, priority, assignedTo, createdBy }) => {
+    const filterTickets = ({ status, category, priority, assignedTo, createdBy }) => {
         return tickets.filter(ticket => {
             if (status && ticket.status !== status) return false;
             if (category && ticket.category !== category) return false;
-            if (equipmentType && ticket.equipmentType !== equipmentType) return false;
             if (priority && ticket.priority !== priority) return false;
             if (assignedTo && ticket.assignedTo !== assignedTo) return false;
             if (createdBy && ticket.createdBy !== createdBy) return false;
@@ -127,19 +125,17 @@ export const AppProvider = ({ children }) => {
 
         return {
             total: tickets.length,
-            pendente: tickets.filter(t => t.status === 'pendente').length,
-            agendadoHoje: tickets.filter(t => {
-                if (!t.scheduledDate) return false;
-                const scheduleDate = new Date(t.scheduledDate).getTime();
-                return scheduleDate >= today && scheduleDate <= endOfDay;
-            }).length,
-            emAndamento: tickets.filter(t => t.status === 'em_andamento').length,
-            pendentesAprovacao: tickets.filter(t => t.status === 'concluido').length,
-            concluidosEsteMes: tickets.filter(t => {
+            open: tickets.filter(t => t.status === 'aberto').length,
+            inProgress: tickets.filter(t => t.status === 'em_andamento').length,
+            resolved: tickets.filter(t => t.status === 'resolvido').length,
+            closed: tickets.filter(t => t.status === 'fechado').length,
+            todayScheduled: 0, // Deprecated but kept for compatibility if needed
+            pendingApproval: tickets.filter(t => t.status === 'resolvido').length, // Mapped to resolved for now
+            completedMonth: tickets.filter(t => {
                 const ticketDate = new Date(t.updatedAt);
                 const now = new Date();
                 return (
-                    t.status === 'aprovado_cliente' &&
+                    t.status === 'fechado' &&
                     ticketDate.getMonth() === now.getMonth() &&
                     ticketDate.getFullYear() === now.getFullYear()
                 );
@@ -186,73 +182,6 @@ export const AppProvider = ({ children }) => {
         return { success: true };
     };
 
-    // Reschedule ticket
-    const rescheduleTicket = (ticketId, scheduledDate) => {
-        setTickets(prev =>
-            prev.map(ticket =>
-                ticket.id === ticketId
-                    ? { ...ticket, scheduledDate, updatedAt: new Date().toISOString() }
-                    : ticket
-            )
-        );
-        showSuccess('Serviço reagendado com sucesso!');
-        return { success: true };
-    };
-
-    // Request revision
-    const requestRevision = (ticketId, reason) => {
-        setTickets(prev =>
-            prev.map(ticket =>
-                ticket.id === ticketId
-                    ? {
-                        ...ticket,
-                        status: 'revisao_necessaria',
-                        revisionReason: reason,
-                        updatedAt: new Date().toISOString()
-                    }
-                    : ticket
-            )
-        );
-        showInfo('Revisão solicitada ao técnico.');
-        return { success: true };
-    };
-
-    // Approve ticket
-    const approveTicket = (ticketId) => {
-        setTickets(prev =>
-            prev.map(ticket =>
-                ticket.id === ticketId
-                    ? {
-                        ...ticket,
-                        status: 'aprovado_cliente',
-                        approvedAt: new Date().toISOString(),
-                        updatedAt: new Date().toISOString()
-                    }
-                    : ticket
-            )
-        );
-        showSuccess('Serviço aprovado pelo cliente!');
-        return { success: true };
-    };
-
-    // Archive ticket
-    const archiveTicket = (ticketId) => {
-        setTickets(prev =>
-            prev.map(ticket =>
-                ticket.id === ticketId
-                    ? {
-                        ...ticket,
-                        status: 'arquivado',
-                        archivedAt: new Date().toISOString(),
-                        updatedAt: new Date().toISOString()
-                    }
-                    : ticket
-            )
-        );
-        showSuccess('Serviço arquivado com sucesso!');
-        return { success: true };
-    };
-
     // Analytics Functions
     const getTicketsByTechnician = () => {
         const technicianCounts = {};
@@ -276,7 +205,7 @@ export const AppProvider = ({ children }) => {
     };
 
     const getAverageCompletionTime = () => {
-        const completedTickets = tickets.filter(t => t.status === 'concluido' || t.status === 'aprovado_cliente');
+        const completedTickets = tickets.filter(t => t.status === 'fechado');
         if (completedTickets.length === 0) return 0;
 
         const totalTime = completedTickets.reduce((acc, ticket) => {
@@ -306,8 +235,8 @@ export const AppProvider = ({ children }) => {
 
     const getTechnicianStats = (userId) => {
         const techTickets = tickets.filter(t => t.assignedTo === userId);
-        const completed = techTickets.filter(t => t.status === 'concluido' || t.status === 'aprovado_cliente').length;
-        const pending = techTickets.filter(t => t.status !== 'concluido' && t.status !== 'aprovado_cliente' && t.status !== 'arquivado').length;
+        const completed = techTickets.filter(t => t.status === 'fechado').length;
+        const pending = techTickets.filter(t => t.status !== 'fechado').length;
 
         return {
             total: techTickets.length,
@@ -323,18 +252,13 @@ export const AppProvider = ({ children }) => {
         return tickets.filter(ticket =>
             ticket.id.toLowerCase().includes(lowerQuery) ||
             ticket.title.toLowerCase().includes(lowerQuery) ||
-            ticket.clientName.toLowerCase().includes(lowerQuery) ||
-            ticket.clientAddress.toLowerCase().includes(lowerQuery) ||
-            ticket.description.toLowerCase().includes(lowerQuery) ||
-            (ticket.equipmentBrand && ticket.equipmentBrand.toLowerCase().includes(lowerQuery)) ||
-            (ticket.equipmentModel && ticket.equipmentModel.toLowerCase().includes(lowerQuery))
+            ticket.description.toLowerCase().includes(lowerQuery)
         );
     };
 
     const value = {
         tickets,
         categories,
-        equipmentTypes,
         statusOptions,
         priorityOptions,
         createTicket,
@@ -344,10 +268,6 @@ export const AppProvider = ({ children }) => {
         updateStatus,
         assignTicket,
         updatePriority,
-        rescheduleTicket,
-        requestRevision,
-        approveTicket,
-        archiveTicket,
         getTicketById,
         filterTickets,
         getStatistics,

@@ -9,12 +9,15 @@ import {
     CheckCircle2,
     AlertCircle,
     UserCircle,
-    Calendar as CalendarIcon
+    Calendar as CalendarIcon,
+    Users,
+    CalendarRange,
+    FileText
 } from 'lucide-react';
 import { useApp } from '../context/AppContext';
 import { useAuth } from '../context/AuthContext';
+import { DEMO_USERS } from '../utils/demoData';
 import ExportButton from '../components/ExportButton';
-import SkeletonCard from '../components/SkeletonCard';
 
 const Dashboard = ({ filterType = 'all' }) => {
     const navigate = useNavigate();
@@ -25,8 +28,11 @@ const Dashboard = ({ filterType = 'all' }) => {
     const [searchTerm, setSearchTerm] = useState('');
     const [statusFilter, setStatusFilter] = useState('todos');
     const [priorityFilter, setPriorityFilter] = useState('todos');
+    const [dateFilter, setDateFilter] = useState('all');
+    const [technicianFilter, setTechnicianFilter] = useState('all');
+    const [customDateStart, setCustomDateStart] = useState('');
+    const [customDateEnd, setCustomDateEnd] = useState('');
     const [showFilters, setShowFilters] = useState(false);
-    const [isLoading, setIsLoading] = useState(false);
 
     // Filter tickets based on props and local filters
     const filteredTickets = useMemo(() => {
@@ -39,7 +45,6 @@ const Dashboard = ({ filterType = 'all' }) => {
             const searchLower = searchTerm.toLowerCase();
             const matchesSearch =
                 ticket.title.toLowerCase().includes(searchLower) ||
-                ticket.clientName.toLowerCase().includes(searchLower) ||
                 ticket.id.toLowerCase().includes(searchLower);
 
             if (!matchesSearch) return false;
@@ -50,20 +55,63 @@ const Dashboard = ({ filterType = 'all' }) => {
             // 4. Priority Filter
             if (priorityFilter !== 'todos' && ticket.priority !== priorityFilter) return false;
 
+            // 5. Technician Filter
+            if (technicianFilter !== 'all' && ticket.assignedTo !== technicianFilter) return false;
+
+            // 6. Date Filter
+            if (dateFilter !== 'all') {
+                const ticketDate = new Date(ticket.createdAt);
+                const today = new Date();
+                today.setHours(0, 0, 0, 0);
+
+                if (dateFilter === '7days') {
+                    const sevenDaysAgo = new Date(today);
+                    sevenDaysAgo.setDate(today.getDate() - 7);
+                    if (ticketDate < sevenDaysAgo) return false;
+                } else if (dateFilter === '30days') {
+                    const thirtyDaysAgo = new Date(today);
+                    thirtyDaysAgo.setDate(today.getDate() - 30);
+                    if (ticketDate < thirtyDaysAgo) return false;
+                } else if (dateFilter === 'thisMonth') {
+                    if (ticketDate.getMonth() !== today.getMonth() || ticketDate.getFullYear() !== today.getFullYear()) return false;
+                } else if (dateFilter === 'lastMonth') {
+                    const lastMonth = new Date(today);
+                    lastMonth.setMonth(today.getMonth() - 1);
+                    if (ticketDate.getMonth() !== lastMonth.getMonth() || ticketDate.getFullYear() !== lastMonth.getFullYear()) return false;
+                } else if (dateFilter === 'custom') {
+                    if (customDateStart) {
+                        const startDate = new Date(customDateStart);
+                        if (ticketDate < startDate) return false;
+                    }
+                    if (customDateEnd) {
+                        const endDate = new Date(customDateEnd);
+                        endDate.setHours(23, 59, 59, 999);
+                        if (ticketDate > endDate) return false;
+                    }
+                }
+            }
+
             return true;
         });
-    }, [tickets, filterType, currentUser.id, searchTerm, statusFilter, priorityFilter]);
+    }, [tickets, filterType, currentUser.id, searchTerm, statusFilter, priorityFilter, technicianFilter, dateFilter, customDateStart, customDateEnd]);
 
     const getStatusBadgeClass = (status) => {
         switch (status) {
-            case 'pendente': return 'badge badge-pendente';
-            case 'agendado': return 'badge badge-agendado';
+            case 'aberto': return 'badge badge-pendente'; // Reusing pendente style for now
             case 'em_andamento': return 'badge badge-em-andamento';
-            case 'concluido': return 'badge badge-concluido';
-            case 'aprovado': return 'badge badge-aprovado';
-            case 'revisao': return 'badge badge-revisao';
-            case 'arquivado': return 'badge badge-arquivado';
+            case 'resolvido': return 'badge badge-concluido'; // Reusing concluido style
+            case 'fechado': return 'badge badge-aprovado'; // Reusing aprovado style
             default: return 'badge';
+        }
+    };
+
+    const getStatusLabel = (status) => {
+        switch (status) {
+            case 'aberto': return 'Aberto';
+            case 'em_andamento': return 'Em Andamento';
+            case 'resolvido': return 'Resolvido';
+            case 'fechado': return 'Fechado';
+            default: return status;
         }
     };
 
@@ -77,9 +125,9 @@ const Dashboard = ({ filterType = 'all' }) => {
         }
     };
 
-    const formatDate = (dateString) => {
-        if (!dateString) return 'Não agendado';
-        return new Date(dateString).toLocaleDateString('pt-PT', {
+    const formatDate = (timestamp) => {
+        if (!timestamp) return '-';
+        return new Date(timestamp).toLocaleDateString('pt-PT', {
             day: '2-digit',
             month: 'short',
             year: 'numeric'
@@ -88,11 +136,21 @@ const Dashboard = ({ filterType = 'all' }) => {
 
     const getPageTitle = () => {
         switch (filterType) {
-            case 'assigned': return 'Meus Trabalhos';
-            case 'created': return 'Meus Pedidos';
-            default: return 'Visão Geral';
+            case 'assigned': return 'Meus Tickets';
+            case 'created': return 'Criados por Mim';
+            default: return 'Dashboard';
         }
     };
+
+    // Calculate stats dynamically based on current tickets
+    const dashboardStats = useMemo(() => {
+        const total = tickets.length;
+        const open = tickets.filter(t => t.status === 'aberto').length;
+        const inProgress = tickets.filter(t => t.status === 'em_andamento').length;
+        const resolved = tickets.filter(t => t.status === 'resolvido').length;
+        const closed = tickets.filter(t => t.status === 'fechado').length;
+        return { total, open, inProgress, resolved, closed };
+    }, [tickets]);
 
     return (
         <div className="animate-fadeIn">
@@ -104,13 +162,13 @@ const Dashboard = ({ filterType = 'all' }) => {
                         <p className="text-secondary">Bem-vindo de volta, {currentUser?.name}</p>
                     </div>
                     <div className="flex gap-sm">
-                        <ExportButton tickets={filteredTickets} filename="tickets" />
+                        <ExportButton tickets={filteredTickets} filename="tickets_internos" />
                         <button
                             onClick={() => navigate('/create')}
                             className="btn btn-primary btn-lg"
                         >
                             <Plus size={20} />
-                            Novo Serviço
+                            Novo Ticket
                         </button>
                     </div>
                 </div>
@@ -121,17 +179,16 @@ const Dashboard = ({ filterType = 'all' }) => {
                         <button
                             className="stat-card stat-icon-primary"
                             onClick={() => {
-                                setStatusFilter('agendado');
+                                setStatusFilter('aberto');
                                 setShowFilters(true);
-                                window.scrollTo({ top: 300, behavior: 'smooth' });
                             }}
                         >
                             <div className="stat-icon">
-                                <CalendarIcon size={24} />
+                                <AlertCircle size={24} />
                             </div>
                             <div className="stat-content">
-                                <p className="stat-label">Agendados Hoje</p>
-                                <p className="stat-value">{stats.todayScheduled}</p>
+                                <p className="stat-label">Abertos</p>
+                                <p className="stat-value">{dashboardStats.open}</p>
                             </div>
                         </button>
 
@@ -140,7 +197,6 @@ const Dashboard = ({ filterType = 'all' }) => {
                             onClick={() => {
                                 setStatusFilter('em_andamento');
                                 setShowFilters(true);
-                                window.scrollTo({ top: 300, behavior: 'smooth' });
                             }}
                         >
                             <div className="stat-icon">
@@ -148,41 +204,39 @@ const Dashboard = ({ filterType = 'all' }) => {
                             </div>
                             <div className="stat-content">
                                 <p className="stat-label">Em Andamento</p>
-                                <p className="stat-value">{stats.inProgress}</p>
+                                <p className="stat-value">{dashboardStats.inProgress}</p>
                             </div>
                         </button>
 
                         <button
                             className="stat-card stat-icon-info"
                             onClick={() => {
-                                setStatusFilter('concluido');
+                                setStatusFilter('resolvido');
                                 setShowFilters(true);
-                                window.scrollTo({ top: 300, behavior: 'smooth' });
                             }}
                         >
                             <div className="stat-icon">
                                 <CheckCircle2 size={24} />
                             </div>
                             <div className="stat-content">
-                                <p className="stat-label">Pendentes Aprovação</p>
-                                <p className="stat-value">{stats.pendingApproval}</p>
+                                <p className="stat-label">Resolvidos</p>
+                                <p className="stat-value">{dashboardStats.resolved}</p>
                             </div>
                         </button>
 
                         <button
                             className="stat-card stat-icon-success"
                             onClick={() => {
-                                setStatusFilter('aprovado');
+                                setStatusFilter('fechado');
                                 setShowFilters(true);
-                                window.scrollTo({ top: 300, behavior: 'smooth' });
                             }}
                         >
                             <div className="stat-icon">
-                                <ArrowUpRight size={24} />
+                                <FileText size={24} />
                             </div>
                             <div className="stat-content">
-                                <p className="stat-label">Concluídos Mês</p>
-                                <p className="stat-value">{stats.completedMonth}</p>
+                                <p className="stat-label">Fechados</p>
+                                <p className="stat-value">{dashboardStats.closed}</p>
                             </div>
                         </button>
                     </div>
@@ -196,7 +250,7 @@ const Dashboard = ({ filterType = 'all' }) => {
                         <Search className="absolute left-3 top-1/2 -translate-y-1/2 text-muted" size={20} />
                         <input
                             type="text"
-                            placeholder="Pesquisar serviços, clientes..."
+                            placeholder="Pesquisar por título ou ID..."
                             className="input pl-10"
                             value={searchTerm}
                             onChange={(e) => setSearchTerm(e.target.value)}
@@ -213,25 +267,28 @@ const Dashboard = ({ filterType = 'all' }) => {
                 </div>
 
                 {showFilters && (
-                    <div className="grid grid-cols-1 md:grid-cols-3 gap-md mt-md pt-md border-t border-slate-700 animate-slideDown">
+                    <div className="grid grid-cols-1 md:grid-cols-4 gap-md mt-md pt-md border-t border-slate-700 animate-slideDown">
                         <div className="form-group mb-0">
-                            <label className="form-label">Status</label>
+                            <label className="form-label flex items-center gap-xs">
+                                <Filter size={14} /> Status
+                            </label>
                             <select
                                 className="select"
                                 value={statusFilter}
                                 onChange={(e) => setStatusFilter(e.target.value)}
                             >
                                 <option value="todos">Todos</option>
-                                <option value="pendente">Pendente</option>
-                                <option value="agendado">Agendado</option>
+                                <option value="aberto">Aberto</option>
                                 <option value="em_andamento">Em Andamento</option>
-                                <option value="concluido">Concluído</option>
-                                <option value="aprovado">Aprovado</option>
+                                <option value="resolvido">Resolvido</option>
+                                <option value="fechado">Fechado</option>
                             </select>
                         </div>
 
                         <div className="form-group mb-0">
-                            <label className="form-label">Prioridade</label>
+                            <label className="form-label flex items-center gap-xs">
+                                <AlertCircle size={14} /> Prioridade
+                            </label>
                             <select
                                 className="select"
                                 value={priorityFilter}
@@ -244,6 +301,63 @@ const Dashboard = ({ filterType = 'all' }) => {
                                 <option value="urgente">Urgente</option>
                             </select>
                         </div>
+
+                        <div className="form-group mb-0">
+                            <label className="form-label flex items-center gap-xs">
+                                <Users size={14} /> Técnico
+                            </label>
+                            <select
+                                className="select"
+                                value={technicianFilter}
+                                onChange={(e) => setTechnicianFilter(e.target.value)}
+                            >
+                                <option value="all">Todos</option>
+                                {DEMO_USERS.filter(u => u.role === 'tecnico').map(user => (
+                                    <option key={user.id} value={user.id}>{user.name}</option>
+                                ))}
+                            </select>
+                        </div>
+
+                        <div className="form-group mb-0">
+                            <label className="form-label flex items-center gap-xs">
+                                <CalendarRange size={14} /> Período
+                            </label>
+                            <select
+                                className="select"
+                                value={dateFilter}
+                                onChange={(e) => setDateFilter(e.target.value)}
+                            >
+                                <option value="all">Todo o período</option>
+                                <option value="7days">Últimos 7 dias</option>
+                                <option value="30days">Últimos 30 dias</option>
+                                <option value="thisMonth">Este Mês</option>
+                                <option value="lastMonth">Mês Passado</option>
+                                <option value="custom">Personalizado</option>
+                            </select>
+                        </div>
+
+                        {dateFilter === 'custom' && (
+                            <div className="col-span-full grid grid-cols-1 md:grid-cols-2 gap-md mt-sm p-sm bg-slate-800 rounded-md">
+                                <div className="form-group mb-0">
+                                    <label className="form-label text-xs">Data Início</label>
+                                    <input
+                                        type="date"
+                                        className="input"
+                                        value={customDateStart}
+                                        onChange={(e) => setCustomDateStart(e.target.value)}
+                                    />
+                                </div>
+                                <div className="form-group mb-0">
+                                    <label className="form-label text-xs">Data Fim</label>
+                                    <input
+                                        type="date"
+                                        className="input"
+                                        value={customDateEnd}
+                                        onChange={(e) => setCustomDateEnd(e.target.value)}
+                                    />
+                                </div>
+                            </div>
+                        )}
                     </div>
                 )}
             </div>
@@ -252,13 +366,13 @@ const Dashboard = ({ filterType = 'all' }) => {
             {filteredTickets.length === 0 ? (
                 <div className="empty-state card">
                     <div className="empty-state-icon">📋</div>
-                    <h3 className="empty-state-title">Nenhum serviço encontrado</h3>
-                    <p>Tente ajustar os filtros ou criar um novo serviço.</p>
+                    <h3 className="empty-state-title">Nenhum ticket encontrado</h3>
+                    <p>Tente ajustar os filtros ou criar um novo ticket.</p>
                     <button
                         onClick={() => navigate('/create')}
                         className="btn btn-primary mt-md"
                     >
-                        Criar Serviço
+                        Criar Ticket
                     </button>
                 </div>
             ) : (
@@ -271,7 +385,7 @@ const Dashboard = ({ filterType = 'all' }) => {
                         >
                             <div className="flex justify-between items-start mb-md">
                                 <span className={getStatusBadgeClass(ticket.status)}>
-                                    {ticket.status.replace('_', ' ')}
+                                    {getStatusLabel(ticket.status)}
                                 </span>
                                 {ticket.priority === 'urgente' && (
                                     <span className="flex items-center gap-xs text-red-500 text-xs font-bold animate-pulse">
@@ -286,19 +400,17 @@ const Dashboard = ({ filterType = 'all' }) => {
                             </h3>
 
                             <div className="flex items-center gap-xs text-sm text-secondary mb-md">
-                                <span className="capitalize">{ticket.equipmentType.replace('_', ' ')}</span>
-                                <span>•</span>
                                 <span className="capitalize">{ticket.category}</span>
                             </div>
 
                             <div className="space-y-sm mb-lg">
                                 <div className="flex items-center gap-sm text-sm text-secondary">
                                     <UserCircle size={16} />
-                                    {ticket.clientName}
+                                    Criado por: {DEMO_USERS.find(u => u.id === ticket.createdBy)?.name || 'Desconhecido'}
                                 </div>
                                 <div className="flex items-center gap-sm text-sm text-secondary">
                                     <CalendarIcon size={16} />
-                                    {formatDate(ticket.scheduledDate)}
+                                    {formatDate(ticket.createdAt)}
                                 </div>
                             </div>
 
