@@ -4,16 +4,20 @@ import {
     LayoutDashboard,
     Calendar,
     ClipboardList,
-    UserCircle,
-    LogOut,
     Briefcase,
     Menu,
-    X
+    X,
+    LogOut,
+    Sun,
+    Moon,
+    CloudMoon
 } from 'lucide-react';
 import { useAuth } from '../context/AuthContext';
+import { useTheme } from '../context/ThemeContext';
 
 const Layout = () => {
     const { currentUser, logout } = useAuth();
+    const { theme, toggleTheme } = useTheme();
     const location = useLocation();
     const navigate = useNavigate();
     const [isMobileMenuOpen, setIsMobileMenuOpen] = React.useState(false);
@@ -31,6 +35,32 @@ const Layout = () => {
     ];
 
     const isActive = (path) => location.pathname === path;
+
+    const getThemeIcon = () => {
+        switch (theme) {
+            case 'light':
+                return <Sun size={20} />;
+            case 'dark':
+                return <Moon size={20} />;
+            case 'night':
+                return <CloudMoon size={20} />;
+            default:
+                return <Sun size={20} />;
+        }
+    };
+
+    const getThemeLabel = () => {
+        switch (theme) {
+            case 'light':
+                return 'Claro';
+            case 'dark':
+                return 'Escuro';
+            case 'night':
+                return 'Noite';
+            default:
+                return 'Claro';
+        }
+    };
 
     return (
         <div className="layout-container">
@@ -82,6 +112,16 @@ const Layout = () => {
                 </nav>
 
                 <div className="sidebar-footer">
+                    {/* Theme Toggle Button */}
+                    <button
+                        onClick={toggleTheme}
+                        className="nav-item theme-toggle"
+                        title={`Tema: ${getThemeLabel()}`}
+                    >
+                        {getThemeIcon()}
+                        <span>{getThemeLabel()}</span>
+                    </button>
+
                     <button onClick={handleLogout} className="nav-item logout-btn">
                         <LogOut size={20} />
                         <span>Sair</span>
@@ -100,9 +140,9 @@ const Layout = () => {
                         <Menu size={24} />
                     </button>
                     <span className="mobile-title">BT Services</span>
-                    <div className="avatar avatar-sm">
-                        {currentUser?.name?.charAt(0) || 'U'}
-                    </div>
+                    <button onClick={toggleTheme} className="theme-toggle-mobile">
+                        {getThemeIcon()}
+                    </button>
                 </header>
 
                 <div className="content-wrapper">

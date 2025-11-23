@@ -3,6 +3,7 @@ import { BrowserRouter, Routes, Route, Navigate } from 'react-router-dom';
 import { AuthProvider, useAuth } from './context/AuthContext';
 import { AppProvider } from './context/AppContext';
 import { ToastProvider } from './context/ToastContext';
+import { ThemeProvider } from './context/ThemeContext';
 import Login from './pages/Login';
 import Register from './pages/Register';
 import Dashboard from './pages/Dashboard';
@@ -56,32 +57,34 @@ const CalendarPage = () => {
 
 function App() {
     return (
-        <ToastProvider>
-            <AuthProvider>
-                <AppProvider>
-                    <BrowserRouter>
-                        <Routes>
-                            <Route path="/login" element={<Login />} />
-                            <Route path="/register" element={<Register />} />
+        <ThemeProvider>
+            <ToastProvider>
+                <AuthProvider>
+                    <AppProvider>
+                        <BrowserRouter>
+                            <Routes>
+                                <Route path="/login" element={<Login />} />
+                                <Route path="/register" element={<Register />} />
 
-                            {/* Protected Routes wrapped in Layout */}
-                            <Route path="/" element={<ProtectedRoute><Layout /></ProtectedRoute>}>
-                                <Route index element={<Navigate to="/dashboard" replace />} />
+                                {/* Protected Routes wrapped in Layout */}
+                                <Route path="/" element={<ProtectedRoute><Layout /></ProtectedRoute>}>
+                                    <Route index element={<Navigate to="/dashboard" replace />} />
 
-                                <Route path="dashboard" element={<Dashboard filterType="all" />} />
-                                <Route path="my-work" element={<Dashboard filterType="assigned" />} />
-                                <Route path="my-requests" element={<Dashboard filterType="created" />} />
-                                <Route path="calendar" element={<CalendarPage />} />
+                                    <Route path="dashboard" element={<Dashboard filterType="all" />} />
+                                    <Route path="my-work" element={<Dashboard filterType="assigned" />} />
+                                    <Route path="my-requests" element={<Dashboard filterType="created" />} />
+                                    <Route path="calendar" element={<CalendarPage />} />
 
-                                <Route path="create" element={<CreateTicket />} />
-                                <Route path="ticket/:id" element={<TicketDetail />} />
-                                <Route path="analytics" element={<AnalyticsDashboard />} />
-                            </Route>
-                        </Routes>
-                    </BrowserRouter>
-                </AppProvider>
-            </AuthProvider>
-        </ToastProvider>
+                                    <Route path="create" element={<CreateTicket />} />
+                                    <Route path="ticket/:id" element={<TicketDetail />} />
+                                    <Route path="analytics" element={<AnalyticsDashboard />} />
+                                </Route>
+                            </Routes>
+                        </BrowserRouter>
+                    </AppProvider>
+                </AuthProvider>
+            </ToastProvider>
+        </ThemeProvider>
     );
 }
 

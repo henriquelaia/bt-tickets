@@ -29,7 +29,9 @@ export const AppProvider = ({ children }) => {
             try {
                 setTickets(JSON.parse(savedTickets));
             } catch (error) {
-                console.error('Failed to load tickets:', error);
+                if (import.meta.env.DEV) {
+                    console.error('Failed to load tickets:', error);
+                }
                 setTickets(DEMO_TICKETS);
             }
         } else {
@@ -294,7 +296,10 @@ export const AppProvider = ({ children }) => {
         }).reverse();
 
         return last7Days.map(date => {
-            const count = tickets.filter(t => t.createdAt.startsWith(date)).length;
+            const count = tickets.filter(t => {
+                const ticketDate = new Date(t.createdAt).toISOString().split('T')[0];
+                return ticketDate === date;
+            }).length;
             return { date: date.split('-').slice(1).join('/'), tickets: count };
         });
     };

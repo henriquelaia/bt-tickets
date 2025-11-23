@@ -15,34 +15,18 @@ export default function DraggableTicket({ ticket }) {
     return (
         <div
             ref={drag}
-            className="ticket-card-mini"
-            style={{
-                opacity: isDragging ? 0.5 : 1,
-                cursor: 'grab',
-                background: 'var(--clr-bg-secondary)',
-                padding: 'var(--space-xs) var(--space-sm)',
-                borderRadius: 'var(--radius-sm)',
-                marginBottom: 'var(--space-xs)',
-                borderLeft: `3px solid var(--priority-${ticket.priority})`,
-                fontSize: '0.75rem',
-                boxShadow: 'var(--shadow-sm)'
-            }}
+            className={`calendar-ticket draggable-ticket status-${ticket.status} ${isDragging ? 'dragging' : ''}`}
         >
-            <div className="flex justify-between items-center mb-1">
-                <span className="font-bold truncate" style={{ maxWidth: '80%' }}>{ticket.title}</span>
+            <div className="calendar-ticket-title">{ticket.title}</div>
+            <div className="flex justify-between items-center">
+                <span className={`badge badge-${ticket.status}`} style={{ fontSize: '0.65rem', padding: '2px 4px' }}>
+                    {getStatusName(ticket.status)}
+                </span>
                 {assignedUser && (
-                    <div className="avatar avatar-xs" style={{ width: '16px', height: '16px', fontSize: '8px' }}>
+                    <div className="avatar" style={{ width: '16px', height: '16px', fontSize: '8px' }}>
                         {getInitials(assignedUser.name)}
                     </div>
                 )}
-            </div>
-            <div className="flex justify-between items-center">
-                <span className={`badge badge-${ticket.status} text-xs`} style={{ padding: '2px 4px', fontSize: '0.65rem' }}>
-                    {getStatusName(ticket.status)}
-                </span>
-                <span className="text-muted" style={{ fontSize: '0.65rem' }}>
-                    {ticket.id}
-                </span>
             </div>
         </div>
     );

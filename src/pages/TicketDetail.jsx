@@ -4,7 +4,7 @@ import { useAuth } from '../context/AuthContext';
 import { useApp } from '../context/AppContext';
 import { ArrowLeft, Calendar, User, MapPin, Phone, Wrench, Send, PenTool, CheckCircle, AlertTriangle, XCircle } from 'lucide-react';
 import { getStatusName, getPriorityName, getUserById, formatDateTime, getInitials, getCategoryById, getEquipmentTypeById } from '../utils/demoData';
-import PhotoUpload from './components/PhotoUpload';
+import PhotoUpload from '../pages/components/PhotoUpload';
 import SignaturePad from '../components/SignaturePad';
 
 const statusOptions = [

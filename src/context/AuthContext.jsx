@@ -25,7 +25,9 @@ export const AuthProvider = ({ children }) => {
                 const session = JSON.parse(savedSession);
                 setCurrentUser(session.user);
             } catch (error) {
-                console.error('Failed to restore session:', error);
+                if (import.meta.env.DEV) {
+                    console.error('Failed to restore session:', error);
+                }
                 localStorage.removeItem('hvac_auth_session');
             }
         }

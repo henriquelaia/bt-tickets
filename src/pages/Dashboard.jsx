@@ -13,6 +13,8 @@ import {
 } from 'lucide-react';
 import { useApp } from '../context/AppContext';
 import { useAuth } from '../context/AuthContext';
+import ExportButton from '../components/ExportButton';
+import SkeletonCard from '../components/SkeletonCard';
 
 const Dashboard = ({ filterType = 'all' }) => {
     const navigate = useNavigate();
@@ -24,6 +26,7 @@ const Dashboard = ({ filterType = 'all' }) => {
     const [statusFilter, setStatusFilter] = useState('todos');
     const [priorityFilter, setPriorityFilter] = useState('todos');
     const [showFilters, setShowFilters] = useState(false);
+    const [isLoading, setIsLoading] = useState(false);
 
     // Filter tickets based on props and local filters
     const filteredTickets = useMemo(() => {
@@ -100,57 +103,88 @@ const Dashboard = ({ filterType = 'all' }) => {
                         <h1 className="text-3xl font-bold text-primary">{getPageTitle()}</h1>
                         <p className="text-secondary">Bem-vindo de volta, {currentUser?.name}</p>
                     </div>
-                    <button
-                        onClick={() => navigate('/create')}
-                        className="btn btn-primary btn-lg"
-                    >
-                        <Plus size={20} />
-                        Novo Serviço
-                    </button>
+                    <div className="flex gap-sm">
+                        <ExportButton tickets={filteredTickets} filename="tickets" />
+                        <button
+                            onClick={() => navigate('/create')}
+                            className="btn btn-primary btn-lg"
+                        >
+                            <Plus size={20} />
+                            Novo Serviço
+                        </button>
+                    </div>
                 </div>
 
                 {/* Stats Cards - Only show on main dashboard */}
                 {filterType === 'all' && (
                     <div className="grid grid-cols-1 grid-cols-md-2 grid-cols-lg-4 gap-md">
-                        <div className="card flex items-center gap-md">
-                            <div className="p-3 rounded-full bg-blue-500/10 text-blue-500">
+                        <button
+                            className="stat-card stat-icon-primary"
+                            onClick={() => {
+                                setStatusFilter('agendado');
+                                setShowFilters(true);
+                                window.scrollTo({ top: 300, behavior: 'smooth' });
+                            }}
+                        >
+                            <div className="stat-icon">
                                 <CalendarIcon size={24} />
                             </div>
-                            <div>
-                                <p className="text-sm text-secondary">Agendados Hoje</p>
-                                <p className="text-2xl font-bold">{stats.todayScheduled}</p>
+                            <div className="stat-content">
+                                <p className="stat-label">Agendados Hoje</p>
+                                <p className="stat-value">{stats.todayScheduled}</p>
                             </div>
-                        </div>
+                        </button>
 
-                        <div className="card flex items-center gap-md">
-                            <div className="p-3 rounded-full bg-yellow-500/10 text-yellow-500">
+                        <button
+                            className="stat-card stat-icon-warning"
+                            onClick={() => {
+                                setStatusFilter('em_andamento');
+                                setShowFilters(true);
+                                window.scrollTo({ top: 300, behavior: 'smooth' });
+                            }}
+                        >
+                            <div className="stat-icon">
                                 <Clock size={24} />
                             </div>
-                            <div>
-                                <p className="text-sm text-secondary">Em Andamento</p>
-                                <p className="text-2xl font-bold">{stats.inProgress}</p>
+                            <div className="stat-content">
+                                <p className="stat-label">Em Andamento</p>
+                                <p className="stat-value">{stats.inProgress}</p>
                             </div>
-                        </div>
+                        </button>
 
-                        <div className="card flex items-center gap-md">
-                            <div className="p-3 rounded-full bg-purple-500/10 text-purple-500">
+                        <button
+                            className="stat-card stat-icon-info"
+                            onClick={() => {
+                                setStatusFilter('concluido');
+                                setShowFilters(true);
+                                window.scrollTo({ top: 300, behavior: 'smooth' });
+                            }}
+                        >
+                            <div className="stat-icon">
                                 <CheckCircle2 size={24} />
                             </div>
-                            <div>
-                                <p className="text-sm text-secondary">Pendentes Aprovação</p>
-                                <p className="text-2xl font-bold">{stats.pendingApproval}</p>
+                            <div className="stat-content">
+                                <p className="stat-label">Pendentes Aprovação</p>
+                                <p className="stat-value">{stats.pendingApproval}</p>
                             </div>
-                        </div>
+                        </button>
 
-                        <div className="card flex items-center gap-md">
-                            <div className="p-3 rounded-full bg-green-500/10 text-green-500">
+                        <button
+                            className="stat-card stat-icon-success"
+                            onClick={() => {
+                                setStatusFilter('aprovado');
+                                setShowFilters(true);
+                                window.scrollTo({ top: 300, behavior: 'smooth' });
+                            }}
+                        >
+                            <div className="stat-icon">
                                 <ArrowUpRight size={24} />
                             </div>
-                            <div>
-                                <p className="text-sm text-secondary">Concluídos Mês</p>
-                                <p className="text-2xl font-bold">{stats.completedMonth}</p>
+                            <div className="stat-content">
+                                <p className="stat-label">Concluídos Mês</p>
+                                <p className="stat-value">{stats.completedMonth}</p>
                             </div>
-                        </div>
+                        </button>
                     </div>
                 )}
             </div>
